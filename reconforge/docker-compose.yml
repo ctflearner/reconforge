@@ -1,0 +1,21 @@
+services:
+  reconforge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: reconforge
+    ports:
+      - "8800:8800"
+    volumes:
+      - rf-data:/app/data
+      - ./.env:/app/.env:ro
+    environment:
+      - RF_HOST=0.0.0.0
+      - RF_PORT=8800
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 4
+
+volumes:
+  rf-data:
+    driver: local

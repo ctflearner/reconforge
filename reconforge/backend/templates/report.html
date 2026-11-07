@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReconForge Report — {{scan_name}}</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-card: #1e293b;
+    --bg-code: #0d1117;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --border: #334155;
+    --accent: #3b82f6;
+    --critical: #dc2626;
+    --high: #ea580c;
+    --medium: #d97706;
+    --low: #16a34a;
+    --info: #6b7280;
+  }
+
+  @media print {
+    :root {
+      --bg: #ffffff;
+      --bg-card: #f8fafc;
+      --bg-code: #f1f5f9;
+      --text: #1e293b;
+      --text-muted: #475569;
+      --border: #e2e8f0;
+    }
+    body { color: #1e293b; }
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  h1, h2, h3, h4 { color: var(--text); margin-bottom: 0.5rem; }
+  h1 { font-size: 1.75rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; }
+  h3 { font-size: 1.15rem; margin-top: 1.5rem; color: var(--text-muted); }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .header-left h1 { margin-bottom: 0.25rem; }
+  .header-meta { color: var(--text-muted); font-size: 0.875rem; }
+
+  /* Risk Meter */
+  .risk-meter {
+    width: 120px;
+    height: 120px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .risk-meter svg { position: absolute; top: 0; left: 0; }
+  .risk-meter .score {
+    font-size: 2rem;
+    font-weight: 700;
+    z-index: 1;
+  }
+  .risk-meter .label {
+    position: absolute;
+    bottom: 5px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Summary cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .summary-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+  }
+  .summary-card .num {
+    font-size: 1.75rem;
+    font-weight: 700;
+    display: block;
+  }
+  .summary-card .lbl {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  /* Findings */
+  .finding {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 1rem 0;
+    overflow: hidden;
+  }
+  .finding-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .severity-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .finding-title {
+    font-weight: 600;
+    flex: 1;
+  }
+  .finding-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .finding-body {
+    padding: 1rem;
+  }
+  .finding-body p { margin-bottom: 0.5rem; }
+  .finding-footer {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .evidence {
+    margin: 0.75rem 0;
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem;
+  }
+  .evidence h4 { font-size: 0.8rem; color: var(--accent); margin-bottom: 0.5rem; }
+  .evidence pre {
+    overflow-x: auto;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .evidence code { font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace; color: var(--text); }
+
+  .impact, .remediation {
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-code);
+    border-radius: 0 4px 4px 0;
+  }
+  .impact h4, .remediation h4 { font-size: 0.8rem; color: var(--accent); margin-bottom: 0.25rem; }
+  .remediation { border-left-color: var(--low); }
+  .remediation h4 { color: var(--low); }
+
+  /* Correlation */
+  .correlation {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    margin: 1rem 0;
+    padding: 1rem;
+  }
+  .chain-info { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75rem 0;
+    font-size: 0.85rem;
+  }
+  thead th {
+    background: var(--bg-card);
+    color: var(--text-muted);
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+  }
+  tbody td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:hover { background: rgba(59,130,246,0.05); }
+  tbody tr.error td { color: var(--critical); }
+  tbody tr.skipped td { color: var(--text-muted); }
+  td.meta {
+    font-family: monospace;
+    font-size: 0.75rem;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+  }
+  .toc h3 { margin-top: 0; }
+  .toc ol { padding-left: 1.25rem; }
+  .toc li { margin: 0.25rem 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* Methodology */
+  .methodology {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .footer {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <h1>{{scan_name}}</h1>
+    <div class="header-meta">
+      <span>Target: <strong>{{target_value}}</strong></span> &nbsp;|&nbsp;
+      <span>Type: {{target_type}}</span> &nbsp;|&nbsp;
+      <span>Status: {{scan_status}}</span> &nbsp;|&nbsp;
+      <span>Generated: {{generated_at}}</span>
+    </div>
+  </div>
+  <div class="risk-meter">
+    <svg width="120" height="120" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="8"/>
+      <circle cx="60" cy="60" r="52" fill="none" stroke="{{risk_color}}" stroke-width="8"
+              stroke-dasharray="326.7" stroke-dashoffset="calc(326.7 - 326.7 * {{risk_score}} / 100)"
+              stroke-linecap="round" transform="rotate(-90 60 60)"/>
+    </svg>
+    <span class="score" style="color:{{risk_color}}">{{risk_score}}</span>
+    <span class="label">Risk Score</span>
+  </div>
+</div>
+
+<!-- Executive Summary -->
+<h2 id="summary">Executive Summary</h2>
+<div class="summary-grid">
+  <div class="summary-card"><span class="num" style="color:var(--critical)">{{critical_count}}</span><span class="lbl">Critical</span></div>
+  <div class="summary-card"><span class="num" style="color:var(--high)">{{high_count}}</span><span class="lbl">High</span></div>
+  <div class="summary-card"><span class="num" style="color:var(--medium)">{{medium_count}}</span><span class="lbl">Medium</span></div>
+  <div class="summary-card"><span class="num" style="color:var(--low)">{{low_count}}</span><span class="lbl">Low</span></div>
+  <div class="summary-card"><span class="num" style="color:var(--info)">{{info_count}}</span><span class="lbl">Info</span></div>
+  <div class="summary-card"><span class="num">{{total_assets}}</span><span class="lbl">Assets</span></div>
+  <div class="summary-card"><span class="num">{{total_modules}}</span><span class="lbl">Modules</span></div>
+  <div class="summary-card"><span class="num">{{total_duration}}s</span><span class="lbl">Duration</span></div>
+</div>
+<p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">
+  <strong>{{total_findings}}</strong> confirmed findings across {{total_modules}} modules.
+  <strong>{{false_positive_count}}</strong> false positives filtered.
+  Scan ran from {{started_at}} to {{completed_at}}.
+</p>
+
+<!-- Table of Contents -->
+<div class="toc no-print">
+  <h3>Contents</h3>
+  <ol>
+    <li><a href="#summary">Executive Summary</a></li>
+    <li><a href="#findings">Findings ({{total_findings}})</a></li>
+    <li><a href="#correlations">Attack Chains ({{correlation_count}})</a></li>
+    <li><a href="#assets">Asset Inventory ({{total_assets}})</a></li>
+    <li><a href="#modules">Module Details ({{total_modules}})</a></li>
+    <li><a href="#methodology">Methodology</a></li>
+  </ol>
+</div>
+
+<!-- Findings -->
+<h2 id="findings" class="page-break">Findings ({{total_findings}})</h2>
+{{findings_html}}
+
+<!-- Attack Chains -->
+<h2 id="correlations" class="page-break">Attack Chains / Correlations ({{correlation_count}})</h2>
+{{correlations_html}}
+
+<!-- Asset Inventory -->
+<h2 id="assets" class="page-break">Asset Inventory ({{total_assets}})</h2>
+{{assets_html}}
+
+<!-- Module Execution Details -->
+<h2 id="modules" class="page-break">Module Execution Details</h2>
+<table>
+  <thead>
+    <tr><th>Module</th><th>Status</th><th>Duration</th><th>Findings</th><th>Assets</th><th>Error</th></tr>
+  </thead>
+  <tbody>
+    {{modules_html}}
+  </tbody>
+</table>
+
+<!-- Methodology -->
+<h2 id="methodology">Methodology</h2>
+<div class="methodology">
+  <p>This assessment was conducted using <strong>ReconForge</strong>, a multi-module OSINT and static analysis platform
+  supporting URL, IP, APK, thick client, and Active Directory targets.</p>
+  <p style="margin-top:0.5rem"><strong>Phase 1 — Module Execution:</strong> Automated modules performed reconnaissance,
+  vulnerability analysis, and intelligence gathering in parallel with bounded concurrency.</p>
+  <p style="margin-top:0.5rem"><strong>Phase 2 — Validation:</strong> Multi-strategy false-positive filtering including
+  confidence thresholding, known FP pattern matching, context validation, and independent re-verification of critical/high findings.</p>
+  <p style="margin-top:0.5rem"><strong>Phase 3 — Correlation:</strong> Cross-module correlation engine linked individual findings
+  into attack chains, identifying scenarios where combinations of findings create elevated risk.</p>
+  <p style="margin-top:0.5rem"><strong>Severity Rating:</strong> Based on CVSS v3.1 scoring where applicable, with
+  Critical (9.0-10.0), High (7.0-8.9), Medium (4.0-6.9), Low (0.1-3.9), and Informational categories.</p>
+</div>
+
+<div class="footer">
+  <p>Generated by ReconForge v1.0.0 &mdash; {{generated_at}}</p>
+</div>
+
+</body>
+</html>
